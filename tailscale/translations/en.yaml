@@ -102,6 +102,12 @@ configuration:
       Assistant instance, disable userspace networking mode, which will create a
       `tailscale0` network interface on your host.
       When not set, this option is enabled by default.
+  target_port:
+    name: Target port to proxy
+    description: >-
+      This option lets you specify which internal port the Tailscale Serve and Funnel
+      features will present to the internet.
+      When not set, port 80 (Nginx Proxy Manager default HTTP port) is used.
 network:
   41641/udp: >-
     UDP port to listen on for WireGuard and peer-to-peer traffic.
