@@ -1,4 +1,4 @@
-# Home Assistant Community App: Tailscale
+# Home Assistant Community App: Tailscale (with Nginx Proxy Manager)
 
 [![GitHub Release][releases-shield]][releases]
 ![Project Stage][project-stage-shield]
@@ -19,6 +19,11 @@
 [![Support Frenck on Patreon][patreon-shield]][patreon]
 
 Zero config VPN for building secure networks.
+> 🔀 **Fork Notice**
+>
+> This is a fork of the original **Tailscale App**.  
+> The **target port is now configurable**, making it compatible with **Nginx Proxy Manager (NPM)**.
+>
 
 ## About
 
