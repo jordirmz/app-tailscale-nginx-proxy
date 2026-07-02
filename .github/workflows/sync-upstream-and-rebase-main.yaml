@@ -1,0 +1,125 @@
+name: Sync upstream release + rebase main
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # 04:00 UTC
+  workflow_dispatch:
+
+# Remove all default permissions
+permissions: {}
+
+jobs:
+  sync-upstream-branch:
+    name: Sync origin/upstream to latest upstream RELEASE (keep local workflows)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout upstream branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: upstream
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authenticate git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: Add upstream remote and fetch tags
+        run: |
+          git remote add upstream https://github.com/hassio-addons/app-tailscale.git || true
+          git fetch upstream --tags --prune
+          git fetch origin main --prune
+
+      - name: Reset to latest upstream RELEASE (tag-based)
+        run: |
+          set -e
+
+          # Resolve latest upstream release tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 upstream)
+
+          echo "Latest upstream release tag: $LATEST_TAG"
+
+          # Reset branch to the release commit
+          git reset --hard "$LATEST_TAG"
+
+          # Remove ALL upstream workflows
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+
+          # Restore workflows from our main branch
+          git checkout origin/main -- .github/workflows
+
+          # Commit workflow ownership if needed
+          git add .github/workflows
+          git diff --cached --quiet || \
+            git commit -m "Sync upstream release with $LATEST_TAG (keep local workflows)"
+
+      - name: Push upstream branch
+        run: |
+          git push origin upstream --force-with-lease
+
+  rebase-main:
+    name: Rebase main onto origin/upstream (release-based)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: sync-upstream-branch
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authenticate git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: Fetch updated upstream branch
+        run: |
+          git fetch origin --prune
+
+      - name: Rebase main onto upstream release
+        run: |
+          git rebase origin/upstream
+            
+      - name: Sync version from upstream commit message (-nginx)
+        run: |
+          set -e
+
+          # Read commit message of the upstream release commit
+          UPSTREAM_MSG=$(git log -1 --pretty=%B origin/upstream)
+
+          echo "Upstream commit message:"
+          echo "$UPSTREAM_MSG"
+
+          # Extract version like v0.27.1
+          if [[ "$UPSTREAM_MSG" =~ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "ERROR: Could not extract version from upstream commit message"
+            exit 1
+          fi
+
+          CUSTOM_VERSION="${BASE_VERSION}-nginx"
+
+          echo "Derived version: $CUSTOM_VERSION"
+
+          # Update addon version (idempotent)
+          sed -i "s/^version:.*/version: \"$CUSTOM_VERSION\"/" tailscale/config.yaml
+
+          git add tailscale/config.yaml
+          git commit --amend -m "Add support for custom target port (v$CUSTOM_VERSION)"
+
+      - name: Push main
+        run: |
+          git push origin main --force-with-lease
