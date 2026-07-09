@@ -1,9 +1,9 @@
 ---
-name: Tailscale
-version: dev
-slug: tailscale
-description: Zero config VPN for building secure networks
-url: https://github.com/hassio-addons/app-tailscale
+name: Tailscale (with NPM)
+version: "0.28.1-nginx"
+slug: tailscale-nginx-proxy
+description: Zero config VPN for building secure networks (with NPM support)
+url: https://github.com/jordirmz/app-tailscale-nginx-proxy
 ingress: true
 ingress_port: 0
 ingress_stream: true
@@ -41,16 +41,16 @@ map:
 ports:
   41641/udp: null
 options:
-  accept_dns: true
-  accept_routes: true
-  advertise_exit_node: true
-  advertise_connector: true
+  accept_dns: false
+  accept_routes: false
+  advertise_exit_node: false
+  advertise_connector: false
   advertise_routes:
     - local_subnets
   always_use_derp: false
   log_level: info
   login_server: "https://controlplane.tailscale.com"
-  share_homeassistant: disabled
+  share_homeassistant: serve
   share_on_port: 443
   snat_subnet_routes: true
   stateful_filtering: false
@@ -64,7 +64,8 @@ options:
     share: false
     ssl: false
   taildrop: true
-  userspace_networking: true
+  userspace_networking: false
+  target_port: 443
 schema:
   accept_dns: bool
   accept_routes: bool
@@ -92,3 +93,4 @@ schema:
     ssl: bool
   taildrop: bool
   userspace_networking: bool
+  target_port: int(1,65535)?

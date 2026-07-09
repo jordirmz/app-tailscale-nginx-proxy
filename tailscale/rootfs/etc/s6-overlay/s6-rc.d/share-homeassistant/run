@@ -72,10 +72,11 @@ options+=("$(bashio::config 'share_homeassistant')")
 options+=(--bg=false)
 options+=(--https="$(bashio::config 'share_on_port')")
 options+=(--set-path=/)
-options+=(http://127.0.0.1:"$(bashio::core.port)")
+options+=(http://127.0.0.1:"$(bashio::config 'target_port' '80')")
 
 # This service can wait for HA for minutes, let notify S6 when we are really starting
 echo "" >&3
 
 # Set up serve or funnel
 exec /opt/tailscale "${options[@]}"
+exit 0
